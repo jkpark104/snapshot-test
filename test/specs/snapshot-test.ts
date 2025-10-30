@@ -29,6 +29,83 @@ describe("Snapshot Tests", () => {
   let configuration: Configuration;
   let batch: BatchInfo;
 
+  /**
+   * 전체 페이지를 스크롤하면서 스냅샷 촬영
+   */
+  async function captureFullPageWithScroll(
+    checkName: string,
+    selector?: string
+  ): Promise<number> {
+    try {
+      const scrollInfo = await browser.execute((targetSelector) => {
+        let scrollContainer: Element | null = document.body;
+
+        if (targetSelector) {
+          scrollContainer = document.querySelector(targetSelector);
+        }
+
+        if (!scrollContainer) {
+          scrollContainer = document.body;
+        }
+
+        return {
+          scrollHeight: scrollContainer.scrollHeight,
+          clientHeight: scrollContainer.clientHeight,
+          initialScrollTop: scrollContainer.scrollTop,
+        };
+      }, selector);
+
+      const { scrollHeight, clientHeight } = scrollInfo;
+      let currentScroll = ZERO;
+      let snapshotCount = 0;
+
+      console.log(
+        `전체 페이지 스냅샷 시작 - scrollHeight: ${scrollHeight}, clientHeight: ${clientHeight}`
+      );
+
+      while (currentScroll <= scrollHeight) {
+        // 스크롤 이동
+        await browser.execute(
+          (targetSelector, scrollY) => {
+            let scrollContainer: Element | null = document.body;
+
+            if (targetSelector) {
+              scrollContainer = document.querySelector(targetSelector);
+            }
+
+            if (!scrollContainer) {
+              scrollContainer = document.body;
+            }
+
+            scrollContainer.scrollTo({ top: scrollY });
+          },
+          selector,
+          currentScroll
+        );
+
+        // 스크롤 애니메이션 및 콘텐츠 로딩 대기
+        await browser.pause(ONE_SECOND);
+
+        // 스냅샷 찍기
+        await eyes.check(
+          `${checkName}_scroll_${snapshotCount}`,
+          Target.window()
+        );
+
+        snapshotCount++;
+        currentScroll += clientHeight;
+      }
+
+      console.log(`${checkName}: ${snapshotCount}개의 스냅샷을 촬영했습니다.`);
+      return snapshotCount;
+    } catch (error) {
+      console.error(`전체 페이지 스냅샷 촬영 중 오류:`, error);
+      // 오류 발생 시 최소한 현재 뷰포트라도 촬영
+      await eyes.check(`${checkName}_viewport_only`, Target.window());
+      return 1;
+    }
+  }
+
   before(async () => {
     if (!APPLITOOLS_API_KEY) {
       throw new Error("APPLITOOLS_API_KEY가 설정되지 않았습니다.");
@@ -131,7 +208,7 @@ describe("Snapshot Tests", () => {
       mainLayoutData.layout.tabs.length === 0
     ) {
       console.log("탭 정보가 없습니다. 전체 페이지의 스냅샷을 찍습니다.");
-      await eyes.check("full-page-snapshot", Target.window().fully());
+      await captureFullPageWithScroll("full-page-no-tabs");
       return;
     }
 
@@ -143,7 +220,7 @@ describe("Snapshot Tests", () => {
       console.log(
         "app-main-tab이 존재하지 않습니다. 전체 페이지의 스냅샷을 찍습니다."
       );
-      await eyes.check("full-page-snapshot", Target.window().fully());
+      await captureFullPageWithScroll("full-page-no-app-main-tab");
       return;
     }
 
@@ -153,7 +230,7 @@ describe("Snapshot Tests", () => {
     // 탭 버튼이 없는 경우: 전체 페이지 스냅샷
     if (tabButtonsLength === 0) {
       console.log("탭 버튼이 없습니다. 전체 페이지의 스냅샷을 찍습니다.");
-      await eyes.check("full-page-snapshot", Target.window().fully());
+      await captureFullPageWithScroll("full-page-no-tab-buttons");
       return;
     }
 
@@ -191,7 +268,7 @@ describe("Snapshot Tests", () => {
           console.log(
             `main-layout_${tabIndex}가 표시되지 않습니다. 현재 화면의 스냅샷을 찍습니다.`
           );
-          await eyes.check(`tab_${tabIndex}_fallback`, Target.window().fully());
+          await captureFullPageWithScroll(`tab_${tabIndex}_fallback`);
           continue;
         }
 
@@ -215,7 +292,7 @@ describe("Snapshot Tests", () => {
           console.log(
             `main-layout_${tabIndex}의 컨테이너를 찾을 수 없습니다. 현재 화면의 스냅샷을 찍습니다.`
           );
-          await eyes.check(`tab_${tabIndex}_fallback`, Target.window().fully());
+          await captureFullPageWithScroll(`tab_${tabIndex}_no_container`);
           continue;
         }
 
@@ -275,7 +352,7 @@ describe("Snapshot Tests", () => {
         console.error(`탭 ${tabIndex} 처리 중 오류 발생:`, error);
         // 오류가 발생해도 다음 탭으로 계속 진행
         try {
-          await eyes.check(`tab_${tabIndex}_error`, Target.window().fully());
+          await captureFullPageWithScroll(`tab_${tabIndex}_error`);
         } catch (snapshotError) {
           console.error(`탭 ${tabIndex} 에러 스냅샷 촬영 실패:`, snapshotError);
         }
