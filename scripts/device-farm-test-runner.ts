@@ -380,7 +380,7 @@ export class DeviceFarmTestRunner {
     }
   }
 
-  async runTest(): Promise<void> {
+  async runTest(waitForCompletion: boolean = true): Promise<string | void> {
     try {
       console.log("🚀 Device Farm 테스트 실행을 시작합니다...");
 
@@ -399,6 +399,15 @@ export class DeviceFarmTestRunner {
       // 4. 테스트 실행 스케줄링
       console.log("4. 테스트 실행 스케줄링 중...");
       const runArn = await this.scheduleTestRun(testPackageArn, testSpecArn);
+
+      if (!waitForCompletion) {
+        console.log("\n✅ 테스트가 성공적으로 스케줄되었습니다!");
+        console.log(`📋 Test Run ARN: ${runArn}`);
+        console.log("\n테스트 진행 상황은 AWS Device Farm 콘솔에서 확인하거나");
+        console.log("다음 명령어로 결과를 확인할 수 있습니다:");
+        console.log(`  pnpm device-farm:check-results ${runArn}`);
+        return runArn;
+      }
 
       // 5. 테스트 완료 대기
       console.log("5. 테스트 실행 완료 대기 중...");
@@ -420,7 +429,17 @@ export class DeviceFarmTestRunner {
 async function main() {
   try {
     const testRunner = new DeviceFarmTestRunner();
-    await testRunner.runTest();
+    // WAIT_FOR_COMPLETION 환경변수로 제어 (기본값: true)
+    const waitForCompletion = process.env.WAIT_FOR_COMPLETION !== "false";
+    const runArn = await testRunner.runTest(waitForCompletion);
+
+    if (runArn && !waitForCompletion) {
+      // schedule-only 모드: ARN을 파일로 저장
+      const fs = require("fs");
+      const arnFile = "device-farm-run-arn.txt";
+      fs.writeFileSync(arnFile, runArn);
+      console.log(`\n📁 Test Run ARN이 ${arnFile} 파일에 저장되었습니다.`);
+    }
   } catch (error) {
     console.error("테스트 실행 실패:", error);
     process.exit(1);

@@ -10,6 +10,8 @@
     "device-farm:validate": "ts-node scripts/device-farm-validate.ts",
     "device-farm:setup": "ts-node scripts/device-farm-setup.ts",
     "device-farm:test": "ts-node scripts/device-farm-test-runner.ts",
+    "device-farm:test-async": "WAIT_FOR_COMPLETION=false ts-node scripts/device-farm-test-runner.ts",
+    "device-farm:check-results": "ts-node scripts/device-farm-check-results.ts",
     "device-farm:full": "npm run device-farm:validate && npm run device-farm:test"
   },
   "keywords": [],

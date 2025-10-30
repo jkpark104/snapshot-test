@@ -1,0 +1,79 @@
+name: Check Device Farm Test Results
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_arn:
+        description: 'Device Farm Run ARN (optional, will use latest from artifact if not provided)'
+        required: false
+        type: string
+      wait_for_completion:
+        description: 'Wait for test completion'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  check-results:
+    name: Check Device Farm Test Results
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: us-west-2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download test run ARN artifact
+        if: ${{ !inputs.run_arn }}
+        uses: actions/download-artifact@v4
+        with:
+          name: device-farm-run-arn
+        continue-on-error: true
+
+      - name: Check Device Farm test results
+        run: |
+          if [ -n "${{ inputs.run_arn }}" ]; then
+            echo "Using provided ARN: ${{ inputs.run_arn }}"
+            pnpm device-farm:check-results "${{ inputs.run_arn }}"
+          elif [ -f "device-farm-run-arn.txt" ]; then
+            echo "Using ARN from artifact file"
+            pnpm device-farm:check-results
+          else
+            echo "❌ No ARN provided and no artifact file found"
+            echo "Please provide a Run ARN as input or ensure the test was run in a previous workflow"
+            exit 1
+          fi
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          WAIT_FOR_COMPLETION: ${{ inputs.wait_for_completion }}
+
+      - name: Upload check results summary
+        if: always()
+        run: |
+          echo "## Device Farm Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check completed at $(date)" >> $GITHUB_STEP_SUMMARY

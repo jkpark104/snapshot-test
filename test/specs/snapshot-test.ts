@@ -16,7 +16,7 @@ const PLATFORM_VERSION = process.env.PLATFORM_VERSION;
 const DEVICE_NAME = process.env.DEVICE_NAME;
 
 const TEST_CONFIG = {
-  BASE_URL: "https://app-main-test.socar.me",
+  BASE_URL: "https://app-main.socar.me",
   ORDER_INDEX_OFFSET: 1,
   TIMEOUT: 10_000,
   BATCH_NAME: "App Main Snapshot Test",
