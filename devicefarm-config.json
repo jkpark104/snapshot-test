@@ -1,0 +1,26 @@
+{
+  "testSpec": "test/specs/snapshot-test.ts",
+  "testType": "APPIUM_WEB_NODE_TEST_PACKAGE",
+  "testPackage": {
+    "type": "ZIP"
+  },
+  "configuration": {
+    "jobTimeoutMinutes": 60,
+    "skipAppResign": true,
+    "extraDataPackageArn": null,
+    "networkProfileArn": null,
+    "locale": "en_US",
+    "location": {
+      "latitude": 47.6204,
+      "longitude": -122.3491
+    },
+    "radios": {
+      "wifi": true,
+      "bluetooth": true,
+      "nfc": false,
+      "gps": true
+    },
+    "auxiliaryApps": [],
+    "billingMethod": "METERED"
+  }
+}
