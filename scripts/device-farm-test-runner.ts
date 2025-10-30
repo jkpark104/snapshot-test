@@ -264,6 +264,17 @@ export class DeviceFarmTestRunner {
     testSpecArn: string
   ): Promise<string> {
     try {
+      // 환경변수 준비
+      const environmentVariables: Record<string, string> = {};
+
+      // APPLITOOLS_API_KEY가 있으면 추가
+      if (process.env.APPLITOOLS_API_KEY) {
+        environmentVariables.APPLITOOLS_API_KEY = process.env.APPLITOOLS_API_KEY;
+        console.log("✅ APPLITOOLS_API_KEY 환경변수가 Device Farm에 전달됩니다.");
+      } else {
+        console.warn("⚠️  APPLITOOLS_API_KEY 환경변수가 설정되지 않았습니다.");
+      }
+
       const scheduleRunCommand = new ScheduleRunCommand({
         projectArn: this.projectArn,
         appArn: undefined, // 웹 테스트이므로 앱 ARN 불필요
@@ -273,6 +284,7 @@ export class DeviceFarmTestRunner {
           type: "APPIUM_WEB_NODE",
           testPackageArn: testPackageArn,
           testSpecArn: testSpecArn, // Custom Environment Mode 필수
+          parameters: environmentVariables, // 환경변수 전달
         },
         // Custom environment mode 활성화
         configuration: {
